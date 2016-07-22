@@ -206,6 +206,7 @@ void  xenstore_deinit(void);
 
 int   policy_init(void);
 bool  policy_is_allowed(device_t *device, vm_t *vm);
+bool  policy_vm_usb_is_allowed(vm_t *vm);
 int   policy_set_sticky(int dev);
 int   policy_unset_sticky(int dev);
 char* policy_get_sticky_uuid(int dev);

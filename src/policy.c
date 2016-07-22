@@ -332,6 +332,29 @@ policy_is_allowed(device_t *device, vm_t *vm)
 }
 
 /**
+ * Check if the platform policy allows a given VM to do USB
+ * TODO: move the option to the policy (deny all to VM UUID)
+ */
+bool
+policy_vm_usb_is_allowed(vm_t *vm)
+{
+  char *obj_path = NULL;
+  gboolean v;
+
+  if (!com_citrix_xenclient_xenmgr_find_vm_by_domid_(g_xcbus, "com.citrix.xenclient.xenmgr", "/", vm->domid, &obj_path))
+    return false;
+
+  if (!property_get_com_citrix_xenclient_xenmgr_vm_usb_enabled_(g_xcbus, "com.citrix.xenclient.xenmgr", obj_path, &v)) {
+    g_free(obj_path);
+    return false;
+  }
+
+  g_free(obj_path);
+
+  return (v == TRUE) ? true : false;
+}
+
+/**
  * This function should be called when a new device is plugged.
  * It will assign the device to a VM according to policy.
  *
@@ -366,6 +389,7 @@ policy_auto_assign_new_device(device_t *device)
   if (vm != NULL &&
       vm->domid > 0 &&
       vm->domid != uivm &&
+      policy_vm_usb_is_allowed(vm) &&
       policy_is_allowed(device, vm))
   {
     device->vm = vm;
@@ -417,9 +441,11 @@ policy_auto_assign_devices_to_new_vm(vm_t *vm)
           }
         } else {
           /* The device is not assigned, as expected, plug it to its VM */
-          /* No need to check the policy, ALWAYS implies ALLOW */
-          device->vm = vm;
-          ret |= -usbowls_plug_device(vm->domid, device->busid, device->devid);
+          /* Check with xenmgr but no need to check the policy, ALWAYS implies ALLOW */
+          if (policy_vm_usb_is_allowed(vm)) {
+            device->vm = vm;
+            ret |= -usbowls_plug_device(vm->domid, device->busid, device->devid);
+          }
         }
       }
     }

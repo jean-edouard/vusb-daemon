@@ -349,6 +349,18 @@ gboolean ctxusb_daemon_assign_device(CtxusbDaemonObject *this,
                 "The policy denied assignation of device %d to VM %s", IN_dev_id, IN_vm_uuid);
     return FALSE;
   }
+  if (!policy_vm_usb_is_allowed(vm)) {
+    notify_com_citrix_xenclient_usbdaemon_device_rejected(g_xcbus,
+                                                         USBDAEMON,
+                                                         USBDAEMON_OBJ,
+                                                         device->shortname,
+                                                         "policy");
+    g_set_error(error,
+                DBUS_GERROR,
+                DBUS_GERROR_FAILED,
+                "The platform policy denied assignation of device %d to VM %s", IN_dev_id, IN_vm_uuid);
+    return FALSE;
+  }
 
   device->vm = vm;
   ret = usbowls_plug_device(vm->domid, device->busid, device->devid);
